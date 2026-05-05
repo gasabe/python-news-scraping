@@ -36,9 +36,8 @@ def article_matches_keyword(article: dict, keyword: str) -> bool:
     aparezcan todas las palabras por separado.
 
     Ejemplo:
-        "boca juniors" coincide con textos que contengan:
-        - "Boca Juniors"
-        - "Boca ... Juniors"
+        "economia" coincide con textos que contengan:
+        - "economia"
 
     Además se incluye la URL porque algunas búsquedas generales, como
     "economia", pueden aparecer en la sección de la noticia y no siempre
