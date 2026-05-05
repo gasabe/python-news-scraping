@@ -87,7 +87,22 @@ Forma corta:
 py src/main.py -k "economia" -n 5
 ```
 
-### Caso 4: usar otra URL de busqueda
+### Caso 4: filtrar por anio de publicacion
+
+Por defecto el script guarda noticias del anio actual. Tambien se puede indicar
+un anio puntual:
+
+```powershell
+py src/main.py --keyword "riquelme" --year 2026
+```
+
+Si se quieren guardar noticias de cualquier anio:
+
+```powershell
+py src/main.py --keyword "riquelme" --all-years
+```
+
+### Caso 5: usar otra URL de busqueda
 
 Por defecto el script usa el buscador de Perfil:
 
@@ -162,6 +177,11 @@ minusculas ni acentos. Por ejemplo:
 "economia" coincide aunque las palabras aparezcan separadas
 ```
 
+Por defecto tambien se descartan noticias que no pertenecen al anio actual.
+Esto evita guardar resultados historicos cuando el buscador devuelve articulos
+viejos por relevancia. Se puede cambiar con `--year` o desactivar con
+`--all-years`.
+
 ## Scraping responsable
 
 Para reducir la posibilidad de bloqueo y evitar sobrecargar el sitio, el script
@@ -170,11 +190,11 @@ incluye:
 - User-Agent similar al de un navegador real.
 - Timeouts en las peticiones HTTP.
 - Pausas entre requests mediante `polite_delay`.
+- Consulta de `robots.txt` antes de acceder al buscador y a cada noticia.
 - Uso de Playwright solo para cargar el buscador dinamico.
 
 Pendiente de mejora:
 
-- Consultar y respetar `robots.txt` de forma automatizada antes de scrapear.
 - Hacer configurable el delay entre peticiones.
 - Agregar reintentos controlados ante errores temporales.
 

@@ -1,9 +1,11 @@
 import argparse
+from datetime import datetime
 import unicodedata
 
 from parser import parse_article
 from scraper import DEFAULT_BASE_URL, search_news_links
 from storage import save_to_csv
+from utils import can_fetch_url
 from utils import polite_delay
 
 
@@ -76,6 +78,51 @@ def article_matches_keyword(article: dict, keyword: str) -> bool:
     return False
 
 
+def parse_article_datetime(article: dict) -> datetime | None:
+    """
+    Convierte la fecha ISO 8601 de una noticia en un objeto datetime.
+
+    Si la noticia no tiene fecha o la fecha no se puede interpretar, devuelve
+    None para que el flujo pueda decidir si descarta o no ese articulo.
+    """
+
+    date_value = article.get("fecha_publicacion")
+
+    if not date_value:
+        return None
+
+    try:
+        return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def article_matches_year(article: dict, year: int) -> bool:
+    """
+    Verifica si la noticia pertenece al anio indicado.
+    """
+
+    published_date = parse_article_datetime(article)
+
+    if not published_date:
+        return False
+
+    return published_date.year == year
+
+
+def article_timestamp(article: dict) -> float:
+    """
+    Devuelve un valor numerico para ordenar noticias por fecha.
+    """
+
+    published_date = parse_article_datetime(article)
+
+    if not published_date:
+        return 0
+
+    return published_date.timestamp()
+
+
 def build_output_filename(keyword: str) -> str:
     """
     Genera el nombre del archivo CSV usando la palabra clave ingresada.
@@ -131,6 +178,19 @@ def main():
         default=DEFAULT_BASE_URL,
     )
 
+    parser.add_argument(
+        "--year",
+        help="Año de publicacion a guardar. Por defecto usa el año actual.",
+        type=int,
+        default=datetime.now().year,
+    )
+
+    parser.add_argument(
+        "--all-years",
+        help="Guardar noticias de cualquier año.",
+        action="store_true",
+    )
+
     args = parser.parse_args()
 
     keyword = args.keyword or input("Ingrese una palabra clave: ").strip()
@@ -161,17 +221,32 @@ def main():
         try:
             print(f"[{index}/{len(links)}] Extrayendo: {link}")
 
+            if not can_fetch_url(link):
+                print(f"robots.txt no permite acceder a esta noticia: {link}")
+                continue
+
             article = parse_article(link)
 
-            if article_matches_keyword(article, keyword):
-                news.append(article)
-                if len(news) >= args.max_results:
-                    break
-            else:
+            if not article_matches_keyword(article, keyword):
                 print(
                     "La noticia fue descartada porque no coincide "
                     "con la palabra clave."
                 )
+                polite_delay(1)
+                continue
+
+            if not args.all_years and not article_matches_year(article, args.year):
+                print(
+                    "La noticia fue descartada porque no pertenece "
+                    f"al anio {args.year}."
+                )
+                polite_delay(1)
+                continue
+
+            news.append(article)
+
+            if len(news) >= args.max_results:
+                break
 
             polite_delay(1)
 
@@ -184,6 +259,8 @@ def main():
         return
 
     output_file = build_output_filename(keyword)
+
+    news.sort(key=article_timestamp, reverse=True)
 
     save_to_csv(news, output_file)
 

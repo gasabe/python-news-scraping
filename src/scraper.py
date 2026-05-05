@@ -4,6 +4,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 from utils import absolute_url
+from utils import can_fetch_url
 
 
 DEFAULT_BASE_URL = "https://www.perfil.com"
@@ -35,7 +36,7 @@ def build_search_url(
 
     return (
         f"{base_url}/buscador?q={query_param}"
-        f"#gsc.tab=0&gsc.q={gsc_query}&gsc.page={page_number}"
+        f"#gsc.tab=0&gsc.q={gsc_query}&gsc.page={page_number}&gsc.sort=date"
     )
 
 
@@ -70,6 +71,12 @@ def search_news_links(
             search_url = build_search_url(keyword, base_url, page_number)
 
             print(f"URL de búsqueda: {search_url}")
+
+            if can_fetch_url(search_url):
+                print(f"robots.txt permite acceder a: {search_url}")
+            else:
+                print(f"robots.txt no permite acceder a: {search_url}")
+                break
 
             page.goto(search_url, wait_until="networkidle", timeout=30000)
 
