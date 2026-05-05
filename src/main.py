@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime
+import re
 import unicodedata
 
 from parser import parse_article
@@ -24,6 +25,28 @@ def normalize_text(text: str) -> str:
     )
 
 
+def text_contains_keyword(text: str, keyword: str) -> bool:
+    """
+    Busca la palabra clave como palabra o frase completa.
+    """
+
+    normalized_text = " ".join(normalize_text(text).split())
+    normalized_keyword = " ".join(normalize_text(keyword).split())
+
+    if not normalized_keyword:
+        return False
+
+    keyword_pattern = r"\s+".join(
+        re.escape(word)
+        for word in normalized_keyword.split()
+    )
+
+    return re.search(
+        rf"(?<!\w){keyword_pattern}(?!\w)",
+        normalized_text,
+    ) is not None
+
+
 def article_matches_keyword(article: dict, keyword: str) -> bool:
     """
     Decide si una noticia queda dentro de la búsqueda.
@@ -35,27 +58,10 @@ def article_matches_keyword(article: dict, keyword: str) -> bool:
     title = article.get("titulo") or ""
     description = article.get("descripcion") or ""
 
-    normalized_title = normalize_text(title)
-    normalized_description = normalize_text(description)
-    normalized_keyword = normalize_text(keyword)
-
-    # Primero pruebo con la frase completa.
-    if (
-        normalized_keyword in normalized_title
-        or normalized_keyword in normalized_description
-    ):
-        return True
-
-    # Si son varias palabras, acepto cualquier coincidencia.
-    keyword_words = normalized_keyword.split()
-
-    if len(keyword_words) > 1:
-        return any(
-            word in normalized_title or word in normalized_description
-            for word in keyword_words
-        )
-
-    return False
+    return (
+        text_contains_keyword(title, keyword)
+        or text_contains_keyword(description, keyword)
+    )
 
 
 def parse_article_datetime(article: dict) -> datetime | None:
