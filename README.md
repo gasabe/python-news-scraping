@@ -72,9 +72,9 @@ Forma corta:
 py src/main.py -k "economia"
 ```
 
-### Caso 3: limitar la cantidad de noticias a analizar
+### Caso 3: limitar la cantidad de noticias a guardar
 
-Por defecto se analizan hasta 10 enlaces. Ese limite se puede modificar con
+Por defecto se guardan hasta 10 noticias. Ese limite se puede modificar con
 `--max-results`:
 
 ```powershell
@@ -87,14 +87,24 @@ Forma corta:
 py src/main.py -k "economia" -n 5
 ```
 
-### Caso 4: usar otra URL base
+### Caso 4: usar otra URL de busqueda
 
-El script permite cambiar la URL base con `--url`, aunque la implementacion
-actual esta pensada para el buscador de Perfil:
+Por defecto el script usa el buscador de Perfil:
 
 ```powershell
 py src/main.py --keyword "politica" --url "https://www.perfil.com"
 ```
+
+Tambien se puede pasar una plantilla de busqueda completa usando `{keyword}`:
+
+```powershell
+py src/main.py --keyword "politica" --url "https://www.perfil.com/buscador?q={keyword}#gsc.tab=0&gsc.q={keyword}&gsc.page=1"
+```
+
+Importante: cambiar la URL no alcanza para soportar cualquier diario. Cada sitio
+puede tener una ruta de busqueda, selectores HTML y formato de enlaces distintos.
+La extraccion de enlaces actual sigue pensada para resultados de Perfil /
+Google Custom Search.
 
 ## Salida generada
 
@@ -171,6 +181,8 @@ Pendiente de mejora:
 ## Limitaciones actuales
 
 - El scraper esta adaptado al buscador y estructura actual de Perfil.
+- `--url` puede cambiar la direccion de busqueda, pero no convierte el scraper
+  en generico para cualquier portal.
 - Si el sitio cambia sus selectores, metadatos o comportamiento del buscador,
   puede requerir ajustes.
 - La extraccion de articulos es secuencial, por lo que puede ser lenta si se

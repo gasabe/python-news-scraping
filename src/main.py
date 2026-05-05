@@ -60,7 +60,18 @@ def article_matches_keyword(article: dict, keyword: str) -> bool:
     keyword_words = normalized_keyword.split()
 
     if len(keyword_words) > 1:
-        return all(word in text_to_search for word in keyword_words)
+        if all(word in text_to_search for word in keyword_words):
+            return True
+
+        # Los candidatos ya vienen del buscador del sitio. Para busquedas como
+        # "boca juniors", una nota puede decir solo "Boca" y seguir siendo
+        # relevante aunque no repita el nombre completo.
+        significant_words = [
+            word for word in keyword_words
+            if len(word) >= 4
+        ]
+
+        return any(word in text_to_search for word in significant_words)
 
     return False
 
@@ -105,7 +116,7 @@ def main():
     parser.add_argument(
         "-n",
         "--max-results",
-        help="Cantidad máxima de noticias a analizar.",
+        help="Cantidad maxima de noticias a guardar.",
         type=int,
         default=10,
     )
@@ -113,7 +124,10 @@ def main():
     parser.add_argument(
         "-u",
         "--url",
-        help="URL base del portal de noticias.",
+        help=(
+            "URL base de Perfil o plantilla de busqueda con {keyword}, "
+            "por ejemplo https://example.com/buscar?q={keyword}."
+        ),
         default=DEFAULT_BASE_URL,
     )
 
@@ -127,13 +141,15 @@ def main():
 
     print(f"Buscando noticias relacionadas con: {keyword}")
 
+    candidate_limit = max(args.max_results * 3, args.max_results)
+
     links = search_news_links(
         keyword=keyword,
-        max_results=args.max_results,
+        max_results=candidate_limit,
         base_url=args.url,
     )
 
-    print(f"Se encontraron {len(links)} enlaces para analizar.")
+    print(f"Se encontraron {len(links)} enlaces candidatos para analizar.")
 
     if not links:
         print("No se encontraron enlaces de noticias.")
@@ -149,6 +165,8 @@ def main():
 
             if article_matches_keyword(article, keyword):
                 news.append(article)
+                if len(news) >= args.max_results:
+                    break
             else:
                 print(
                     "La noticia fue descartada porque no coincide "
