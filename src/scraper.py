@@ -64,9 +64,11 @@ def search_news_links(
         browser = playwright.chromium.launch(headless=True)
 
         page = browser.new_page(user_agent=USER_AGENT)
+        print("Cargando resultados del buscador...")
         page.goto(search_url, wait_until="networkidle", timeout=30000)
 
         try:
+            print("Esperando que aparezcan las noticias...")
             page.wait_for_selector(".gsc-webResult", timeout=15000)
         except PlaywrightTimeoutError:
             print(
@@ -104,6 +106,7 @@ def search_news_links(
             if current_page < max_pages:
                 next_page_num = current_page + 1
                 try:
+                    print(f"Cargando pagina {next_page_num} de resultados...")
                     page.locator(".gsc-cursor-page", has_text=str(next_page_num)).first.click()
                     page.wait_for_load_state("networkidle", timeout=15000)
                     page.wait_for_timeout(2000)

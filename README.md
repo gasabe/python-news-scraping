@@ -13,7 +13,7 @@ User-Agent, timeouts y uso de Playwright para el buscador dinámico.
 
 1. Busca noticias en Perfil.com usando la palabra clave que le indiques.
 2. Entra a cada artículo encontrado y extrae el autor, fecha, título, descripción, imagen y URL.
-3. Filtra las noticias según la palabra clave, priorizando título y descripción.
+3. Filtra las noticias si la palabra clave aparece en el título o en la descripción.
 4. Guarda todo en un archivo CSV listo para abrir en Excel o Google Sheets.
 
 ## Instalación
@@ -147,6 +147,8 @@ py src/main.py -k "donald trump" --year 2025
 ```text
 Buscando noticias relacionadas con: donald trump
 URL de búsqueda: https://www.perfil.com/buscador?q=donald+trump#gsc.tab=0&gsc.q=donald%20trump&gsc.page=1
+Cargando resultados del buscador...
+Esperando que aparezcan las noticias...
 Se encontraron 13 enlaces candidatos para analizar.
 [1/13] Extrayendo: https://www.perfil.com/noticias/internacional/...
 [2/13] Extrayendo: https://www.perfil.com/noticias/politica/...
@@ -157,9 +159,9 @@ Proceso finalizado. Archivo generado: data/noticias_donald_trump.csv
 ## Criterio de filtrado
 
 La consigna del ejercicio pide que las noticias contengan la palabra clave
-en el **título** o la **descripción**. El script toma esa condición como base
-y aplica un criterio flexible para mejorar la cantidad de resultados relevantes
-devueltos por el buscador del portal:
+en el **título** o la **descripción**. Por eso el script usa esos dos campos
+para decidir si una noticia coincide con la búsqueda. La URL se extrae y se
+guarda en el CSV, pero no se usa como criterio de coincidencia.
 
 - **Normaliza el texto**: ignora mayúsculas, minúsculas y acentos.
   - `"Economía"` coincide con `"economia"`
@@ -167,15 +169,11 @@ devueltos por el buscador del portal:
 
 - **Para búsquedas con varias palabras** (como "donald trump"):
   - Primero busca la frase completa.
-  - Si no la encuentra, acepta coincidencias donde aparezcan todas las
-    palabras por separado (aunque no estén juntas).
-  - Como respaldo, también considera la URL de la noticia. Esto ayuda cuando
-    el buscador trae una nota relevante cuyo tema aparece en la dirección, pero
-    no está repetido literalmente en el título o la descripción.
+  - Si no la encuentra, acepta que aparezca cualquiera de las palabras en el
+    título o en la descripción.
 
-Esta decisión prioriza traer más noticias potencialmente relacionadas, aunque
-el filtro no sea completamente literal. Si se quisiera cumplir la consigna de
-forma estricta, bastaría con limitar la comparación a `titulo` y `descripcion`.
+Esta decisión interpreta el requisito como una coincidencia en el título **o**
+en la descripción, sin exigir que la palabra clave aparezca en ambos campos.
 
 - **Filtro por año**: por defecto no se filtra por año. Si querés limitar los
   resultados a un año específico, podés usar `--year`.
@@ -230,10 +228,3 @@ El proyecto está dividido en módulos, cada uno con una responsabilidad clara:
 - La extracción es secuencial, así que con muchos resultados puede tardar
   algunos minutos.
 
-## Ideas para mejorar
-
-- Hacer configurable la pausa entre peticiones.
-- Agregar reintentos automáticos ante errores de red.
-- Agregar tests para el filtro por palabra clave y el parseo de artículos.
-- Empaquetar el proyecto en Docker para facilitar la ejecución.
-- Soportar otros portales con parsers específicos por sitio.

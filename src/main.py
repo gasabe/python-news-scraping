@@ -28,37 +28,32 @@ def article_matches_keyword(article: dict, keyword: str) -> bool:
     """
     Decide si una noticia queda dentro de la búsqueda.
 
-    La consigna pide mirar título y descripción. Además uso la URL como apoyo,
-    porque los enlaces ya vienen del buscador del sitio y a veces la categoría
-    o el tema aparece ahí.
+    La consigna pide que la palabra clave aparezca en el título o en la
+    descripción.
     """
 
     title = article.get("titulo") or ""
     description = article.get("descripcion") or ""
-    url = article.get("url_noticia") or ""
 
-    text_to_search = normalize_text(f"{title} {description} {url}")
+    normalized_title = normalize_text(title)
+    normalized_description = normalize_text(description)
     normalized_keyword = normalize_text(keyword)
 
     # Primero pruebo con la frase completa.
-    if normalized_keyword in text_to_search:
+    if (
+        normalized_keyword in normalized_title
+        or normalized_keyword in normalized_description
+    ):
         return True
 
-    # Si son varias palabras, acepto que aparezcan separadas.
+    # Si son varias palabras, acepto cualquier coincidencia.
     keyword_words = normalized_keyword.split()
 
     if len(keyword_words) > 1:
-        if all(word in text_to_search for word in keyword_words):
-            return True
-
-        # Último fallback: si al menos una palabra importante aparece, la nota
-        # queda como posible resultado. Es un criterio flexible, no exacto.
-        significant_words = [
-            word for word in keyword_words
-            if len(word) >= 4
-        ]
-
-        return any(word in text_to_search for word in significant_words)
+        return any(
+            word in normalized_title or word in normalized_description
+            for word in keyword_words
+        )
 
     return False
 
@@ -227,6 +222,7 @@ def main():
             print(f"No se pudo procesar la noticia: {link}")
             print(f"Error: {error}")
 
+        print("Esperando antes de continuar...")
         polite_delay(1)
 
     if not news:
