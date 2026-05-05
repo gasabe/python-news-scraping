@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Archivos generados por el scraper
+data/*.csv
+data/*.db
