@@ -18,12 +18,7 @@ HEADERS = {"User-Agent": USER_AGENT}
 
 def _build_robots_url(url: str) -> str | None:
     """
-    Construye la URL del robots.txt correspondiente a una URL del sitio.
-
-    Ejemplo:
-        https://www.perfil.com/noticias/test.phtml
-        pasa a:
-        https://www.perfil.com/robots.txt
+    Arma la URL del robots.txt para el dominio de una página.
     """
 
     parsed_url = urlparse(url)
@@ -37,11 +32,8 @@ def _build_robots_url(url: str) -> str | None:
 @lru_cache(maxsize=32)
 def _load_robots_parser(robots_url: str) -> RobotFileParser | None:
     """
-    Descarga y parsea un archivo robots.txt.
-
-    Se cachea por dominio para no consultar el mismo robots.txt en cada noticia.
-    Si el archivo no existe, se interpreta como que no hay restricciones
-    declaradas por robots.txt.
+    Descarga y lee robots.txt.
+    Lo cacheo para no pedir el mismo archivo en cada noticia.
     """
 
     parser = RobotFileParser()
@@ -65,11 +57,8 @@ def _load_robots_parser(robots_url: str) -> RobotFileParser | None:
 
 def can_fetch_url(url: str, user_agent: str = HEADERS["User-Agent"]) -> bool:
     """
-    Verifica si robots.txt permite visitar una URL.
-
-    Si no se puede consultar robots.txt, se permite continuar pero se informa
-    el problema por consola. Esto evita que una falla temporal del archivo
-    bloquee todo el script.
+    Revisa si robots.txt permite visitar una URL.
+    Si robots.txt falla, aviso por consola y dejo continuar.
     """
 
     robots_url = _build_robots_url(url)
@@ -87,41 +76,24 @@ def can_fetch_url(url: str, user_agent: str = HEADERS["User-Agent"]) -> bool:
 
 def get_soup(url: str, timeout: int = 10) -> BeautifulSoup:
     """
-    Realiza una petición HTTP GET a una URL y devuelve el HTML parseado
-    como un objeto BeautifulSoup.
-    Args:
-        url: URL a consultar.
-        timeout: tiempo máximo de espera para la respuesta.
-
-    Returns:
-        Objeto BeautifulSoup con el contenido HTML de la página.
-
-    Raises:
-        HTTPError: si la respuesta del servidor no es exitosa.
-        Timeout: si el sitio tarda más de lo esperado.
-        RequestException: para otros errores de conexión.
+    Pide una página con requests y devuelve el HTML parseado con BeautifulSoup.
     """
     response = requests.get(url, headers=HEADERS, timeout=timeout)
     response.raise_for_status()
 
-    # Se usa lxml porque es rápido y robusto para parsear HTML.
+    # lxml es rápido y funciona bien con HTML real de sitios de noticias.
     return BeautifulSoup(response.text, "lxml")
 
 
 def absolute_url(base_url: str, href: str) -> str:
     """
-    Convierte una URL relativa en una URL absoluta.
-
-    Ejemplo:
-        /noticias/economia/test.phtml
-        pasa a:
-        https://www.perfil.com/noticias/economia/test.phtml
+    Convierte un enlace relativo en URL completa.
     """
     return urljoin(base_url, href)
 
 
 def polite_delay(seconds: float = 1.0) -> None:
     """
-    Agrega una pausa entre requests para evitar sobrecargar el sitio. Esto es una práctica básica de scraping responsable.
+    Pausa simple entre pedidos para no consultar el sitio todo de golpe.
     """
     time.sleep(seconds)

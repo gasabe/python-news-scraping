@@ -1,18 +1,19 @@
-# python-news-scraping
+﻿# python-news-scraping
 
 Un script de Python que busca noticias en un portal de noticias según una
 palabra clave, extrae la información relevante de cada artículo y guarda
 los resultados en un archivo CSV.
 
-Fue desarrollado como ejercicio de web scraping y cumple con los requisitos
-de extracción de datos, filtrado por palabra clave, manejo de robots.txt
-y uso de Playwright para el buscador dinámico.
+Fue desarrollado como ejercicio de web scraping y resuelve los requisitos
+principales: búsqueda por palabra clave, extracción de datos de artículos,
+persistencia en CSV, modularización del código, manejo de `robots.txt`,
+User-Agent, timeouts y uso de Playwright para el buscador dinámico.
 
 ## ¿Qué hace?
 
 1. Busca noticias en Perfil.com usando la palabra clave que le indiques.
 2. Entra a cada artículo encontrado y extrae el autor, fecha, título, descripción, imagen y URL.
-3. Filtra las noticias para quedarte solo con las que mencionan la keyword en el título o descripción.
+3. Filtra las noticias según la palabra clave, priorizando título y descripción.
 4. Guarda todo en un archivo CSV listo para abrir en Excel o Google Sheets.
 
 ## Instalación
@@ -29,6 +30,12 @@ cd python-news-scraping
 ```powershell
 py -m venv venv
 .\venv\Scripts\Activate.ps1
+```
+
+Si tu instalación no reconoce el comando `py`, podés usar `python`:
+
+```powershell
+python -m venv venv
 ```
 
 Si estás en Mac o Linux, el comando para activarlo es:
@@ -75,7 +82,7 @@ py src/main.py -k "donald trump" --year 2025
 ### Noticias de cualquier año
 
 ```powershell
-py src/main.py -k "elon musk" --all-years
+py src/main.py -k "elon musk"
 ```
 
 ### Modo interactivo
@@ -95,8 +102,11 @@ Ingrese una palabra clave: economia
 Podés usar varios argumentos juntos:
 
 ```powershell
-py src/main.py -k "donald trump" -n 3 --year 2025 --all-years
+py src/main.py -k "donald trump" -n 3 --year 2025
 ```
+
+El filtro por año es opcional. Si no indicás `--year`, el script guarda
+noticias de cualquier año.
 
 ## Argumentos disponibles
 
@@ -104,8 +114,8 @@ py src/main.py -k "donald trump" -n 3 --year 2025 --all-years
 |---|---|---|---|
 | `--keyword` | `-k` | Palabra clave para buscar | Se pide por consola |
 | `--max-results` | `-n` | Máximo de noticias a guardar | 10 |
-| `--year` | | Año de publicación | Año actual |
-| `--all-years` | | Traer noticias de cualquier año | Desactivado |
+| `--year` | | Año de publicación para filtrar resultados | Sin filtro por año |
+| `--all-years` | | Ignora el filtro por año si se combina con `--year` | No hace falta usarlo normalmente |
 | `--url` | `-u` | URL base o plantilla de búsqueda | Perfil.com |
 
 ## ¿Dónde se guardan los resultados?
@@ -144,11 +154,12 @@ Se encontraron 13 enlaces candidatos para analizar.
 Proceso finalizado. Archivo generado: data/noticias_donald_trump.csv
 ```
 
-## ¿Cómo funciona el filtro de palabras clave?
+## Criterio de filtrado
 
 La consigna del ejercicio pide que las noticias contengan la palabra clave
-en el **título** o la **descripción**. El script aplica el filtro de esta
-forma:
+en el **título** o la **descripción**. El script toma esa condición como base
+y aplica un criterio flexible para mejorar la cantidad de resultados relevantes
+devueltos por el buscador del portal:
 
 - **Normaliza el texto**: ignora mayúsculas, minúsculas y acentos.
   - `"Economía"` coincide con `"economia"`
@@ -158,12 +169,31 @@ forma:
   - Primero busca la frase completa.
   - Si no la encuentra, acepta coincidencias donde aparezcan todas las
     palabras por separado (aunque no estén juntas).
-  - Como apoyo, también busca en la URL de la noticia, porque a veces el
-    tema aparece en la dirección aunque no en el título.
+  - Como respaldo, también considera la URL de la noticia. Esto ayuda cuando
+    el buscador trae una nota relevante cuyo tema aparece en la dirección, pero
+    no está repetido literalmente en el título o la descripción.
 
-- **Filtro por año**: por defecto se guardan solo noticias del año actual
-  para evitar resultados viejos. Se puede cambiar con `--year` o desactivar
-  con `--all-years`.
+Esta decisión prioriza traer más noticias potencialmente relacionadas, aunque
+el filtro no sea completamente literal. Si se quisiera cumplir la consigna de
+forma estricta, bastaría con limitar la comparación a `titulo` y `descripcion`.
+
+- **Filtro por año**: por defecto no se filtra por año. Si querés limitar los
+  resultados a un año específico, podés usar `--year`.
+
+## Decisiones de implementación
+
+- **Portal elegido**: Perfil.com, porque es un portal real de noticias con
+  buscador público y artículos con metadatos suficientes para extraer la
+  información pedida.
+- **Playwright para la búsqueda**: el buscador de Perfil carga resultados con
+  JavaScript. Playwright permite obtener esos enlaces de forma confiable.
+- **Requests y BeautifulSoup para artículos**: una vez obtenidas las URLs, la
+  extracción de cada noticia se hace con `requests` y `BeautifulSoup`, que son
+  más livianos que abrir un navegador por cada artículo.
+- **JSON-LD y meta tags**: se priorizan datos estructurados porque suelen ser
+  más estables que los selectores visuales del sitio.
+- **CSV**: se eligió CSV por simplicidad de entrega y porque puede abrirse en
+  herramientas comunes como Excel o Google Sheets.
 
 ## Scraping responsable
 
@@ -204,6 +234,6 @@ El proyecto está dividido en módulos, cada uno con una responsabilidad clara:
 
 - Hacer configurable la pausa entre peticiones.
 - Agregar reintentos automáticos ante errores de red.
-- Tests automatizados.
-- Empaquetar en Docker para facilitar la ejecución.
-- Soporte para otros portales de noticias.
+- Agregar tests para el filtro por palabra clave y el parseo de artículos.
+- Empaquetar el proyecto en Docker para facilitar la ejecución.
+- Soportar otros portales con parsers específicos por sitio.

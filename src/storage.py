@@ -4,11 +4,7 @@ from pathlib import Path
 
 def save_to_csv(news: list[dict], output_path: str) -> None:
     """
-    Guarda la lista de noticias en un archivo CSV.
-
-    Args:
-        news: lista de diccionarios con datos de noticias.
-        output_path: ruta donde se va a generar el archivo CSV.
+    Guarda las noticias encontradas en un CSV.
     """
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -22,7 +18,7 @@ def save_to_csv(news: list[dict], output_path: str) -> None:
         "url_noticia",
     ]
 
-    # utf-8-sig ayuda a que Excel abra bien los caracteres especiales.
+    # utf-8-sig hace que Excel lea bien los acentos.
     with open(output_path, mode="w", encoding="utf-8-sig", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
 

@@ -15,11 +15,10 @@ def build_search_url(
     page_number: int = 1,
 ) -> str:
     """
-    Construye la URL del buscador de Perfil.
+    Arma la URL del buscador de Perfil.
 
-    Perfil usa Google Custom Search, y los resultados reales se cargan
-    leyendo parámetros del hash de la URL:
-        #gsc.tab=0&gsc.q=...&gsc.page=1
+    Perfil usa Google Custom Search, por eso además del query normal también
+    agrego los parámetros del hash que usa el buscador.
     """
 
     query_param = quote_plus(keyword)
@@ -46,11 +45,10 @@ def search_news_links(
     max_pages: int = 5,
 ) -> list[str]:
     """
-    Busca noticias en Perfil usando Playwright.
+    Busca enlaces de noticias usando Playwright.
 
-    Se usa Playwright porque los resultados del buscador se renderizan
-    dinámicamente con JavaScript. Con requests solo se obtiene el HTML inicial
-    y se pueden capturar links incorrectos, como las noticias de 'Las más leídas'.
+    Lo uso solo en esta parte porque el buscador carga los resultados con
+    JavaScript. Después, cada artículo se procesa con requests.
     """
 
     links = []
@@ -74,7 +72,7 @@ def search_news_links(
             print(
                 "No se pudieron cargar resultados con el selector de Perfil "
                 "(.gsc-webResult). Si cambiaste la URL, ese sitio probablemente "
-                "usa otra estructura de busqueda."
+                "usa otra estructura de búsqueda."
             )
             browser.close()
             return links

@@ -7,15 +7,8 @@ from utils import get_soup
 
 def _get_meta_content(soup, property_name: str):
     """
-    Busca el contenido de una etiqueta meta.
-
-    Algunos sitios usan:
-        <meta property="og:title" content="...">
-
-    Otros usan:
-        <meta name="description" content="...">
-
-    Esta función contempla ambos casos.
+    Busca una meta tag por property o por name.
+    Uso ambas opciones porque los sitios no siempre cargan los metadatos igual.
     """
 
     tag = soup.find("meta", property=property_name)
@@ -31,9 +24,8 @@ def _get_meta_content(soup, property_name: str):
 
 def _format_iso_date(date_value):
     """
-    Convierte una fecha encontrada en el sitio al formato ISO 8601.
-
-    Si no puede convertirla, devuelve el valor original para no perder el dato.
+    Intenta dejar la fecha en formato ISO 8601.
+    Si no se puede convertir, devuelve el valor original.
     """
 
     if not date_value:
@@ -48,17 +40,8 @@ def _format_iso_date(date_value):
 
 def _parse_json_ld(soup):
     """
-    Intenta extraer información estructurada desde JSON-LD.
-
-    Muchos portales de noticias incluyen datos estructurados en scripts:
-        <script type="application/ld+json">
-
-    Ahí suelen estar datos como:
-        - headline
-        - description
-        - author
-        - datePublished
-        - image
+    Busca datos estructurados del artículo en JSON-LD.
+    Ahí suelen estar título, descripción, autor, fecha e imagen.
     """
 
     scripts = soup.find_all("script", type="application/ld+json")
@@ -98,7 +81,7 @@ def _parse_json_ld(soup):
 
 def _normalize_structured_value(data, value_key: str):
     """
-    Normaliza un dato que puede venir como string, diccionario o lista.
+    Saca un valor usable cuando el dato viene como string, dict o lista.
     """
 
     if isinstance(data, dict):
@@ -121,18 +104,12 @@ def _normalize_author(author):
 
 def parse_article(url: str) -> dict:
     """
-    Extrae la información principal de una noticia.
-
-    Args:
-        url: URL de la noticia a procesar.
-
-    Returns:
-        Diccionario con los datos normalizados de la noticia.
+    Extrae los campos pedidos para una noticia.
     """
 
     soup = get_soup(url)
 
-    # JSON-LD suele ser más estable que depender de clases CSS del sitio.
+    # Primero pruebo con JSON-LD porque suele cambiar menos que las clases CSS.
     json_ld = _parse_json_ld(soup)
 
     title = (

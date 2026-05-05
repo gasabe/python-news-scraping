@@ -10,12 +10,8 @@ from utils import can_fetch_url, polite_delay
 
 def normalize_text(text: str) -> str:
     """
-    Normaliza texto para hacer comparaciones más flexibles.
-
-    Convierte el texto a minúsculas y elimina acentos.
-    Ejemplo:
-        "Economía" -> "economia"
-        "dólar" -> "dolar"
+    Deja el texto en un formato más fácil de comparar.
+    Así "Economía" y "economia" se toman como lo mismo.
     """
 
     text = text.lower()
@@ -30,19 +26,11 @@ def normalize_text(text: str) -> str:
 
 def article_matches_keyword(article: dict, keyword: str) -> bool:
     """
-    Verifica si la palabra clave aparece en datos relevantes de la noticia.
+    Decide si una noticia queda dentro de la búsqueda.
 
-    Primero intenta encontrar la frase completa.
-    Si la búsqueda tiene varias palabras, también acepta coincidencias donde
-    aparezcan todas las palabras por separado.
-
-    Ejemplo:
-        "economia" coincide con textos que contengan:
-        - "economia"
-
-    Además se incluye la URL porque algunas búsquedas generales, como
-    "economia", pueden aparecer en la sección de la noticia y no siempre
-    en el título o descripción.
+    La consigna pide mirar título y descripción. Además uso la URL como apoyo,
+    porque los enlaces ya vienen del buscador del sitio y a veces la categoría
+    o el tema aparece ahí.
     """
 
     title = article.get("titulo") or ""
@@ -52,21 +40,19 @@ def article_matches_keyword(article: dict, keyword: str) -> bool:
     text_to_search = normalize_text(f"{title} {description} {url}")
     normalized_keyword = normalize_text(keyword)
 
-    # Coincidencia directa de la frase completa.
+    # Primero pruebo con la frase completa.
     if normalized_keyword in text_to_search:
         return True
 
-    # Coincidencia flexible: todas las palabras aparecen en el texto,
-    # aunque no estén juntas.
+    # Si son varias palabras, acepto que aparezcan separadas.
     keyword_words = normalized_keyword.split()
 
     if len(keyword_words) > 1:
         if all(word in text_to_search for word in keyword_words):
             return True
 
-        # Los candidatos ya vienen del buscador del sitio. Para busquedas como
-        # "boca juniors", una nota puede decir solo "Boca" y seguir siendo
-        # relevante aunque no repita el nombre completo.
+        # Último fallback: si al menos una palabra importante aparece, la nota
+        # queda como posible resultado. Es un criterio flexible, no exacto.
         significant_words = [
             word for word in keyword_words
             if len(word) >= 4
@@ -79,10 +65,8 @@ def article_matches_keyword(article: dict, keyword: str) -> bool:
 
 def parse_article_datetime(article: dict) -> datetime | None:
     """
-    Convierte la fecha ISO 8601 de una noticia en un objeto datetime.
-
-    Si la noticia no tiene fecha o la fecha no se puede interpretar, devuelve
-    None para que el flujo pueda decidir si descarta o no ese articulo.
+    Convierte la fecha guardada en la noticia a datetime.
+    Si falta o no se puede leer, devuelvo None.
     """
 
     date_value = article.get("fecha_publicacion")
@@ -98,7 +82,7 @@ def parse_article_datetime(article: dict) -> datetime | None:
 
 def article_matches_year(article: dict, year: int) -> bool:
     """
-    Verifica si la noticia pertenece al anio indicado.
+    Verifica si la noticia pertenece al año indicado.
     """
 
     published_date = parse_article_datetime(article)
@@ -111,7 +95,7 @@ def article_matches_year(article: dict, year: int) -> bool:
 
 def article_timestamp(article: dict) -> float:
     """
-    Devuelve un valor numerico para ordenar noticias por fecha.
+    Devuelve un número para ordenar las noticias por fecha.
     """
 
     published_date = parse_article_datetime(article)
@@ -124,10 +108,7 @@ def article_timestamp(article: dict) -> float:
 
 def build_output_filename(keyword: str) -> str:
     """
-    Genera el nombre del archivo CSV usando la palabra clave ingresada.
-
-    Ejemplo:
-        "dolar blue" -> data/noticias_dolar_blue.csv
+    Arma el nombre del CSV a partir de la palabra buscada.
     """
 
     clean_keyword = normalize_text(keyword.strip().replace(" ", "_"))
@@ -137,15 +118,8 @@ def build_output_filename(keyword: str) -> str:
 
 def main():
     """
-    Punto de entrada del script.
-
-    Flujo general:
-        1. Lee la palabra clave ingresada por el usuario.
-        2. Busca enlaces de noticias en el portal.
-        3. Entra a cada noticia encontrada.
-        4. Extrae autor, fecha, título, descripción, imagen y URL.
-        5. Filtra las noticias según la palabra clave.
-        6. Guarda los resultados en un archivo CSV.
+    Coordina el flujo principal: leer argumentos, buscar enlaces, extraer
+    artículos, filtrar resultados y guardar el CSV.
     """
 
     parser = argparse.ArgumentParser(
@@ -171,7 +145,7 @@ def main():
         "-u",
         "--url",
         help=(
-            "URL base de Perfil o plantilla de busqueda con {keyword}, "
+            "URL base de Perfil o plantilla de búsqueda con {keyword}, "
             "por ejemplo https://example.com/buscar?q={keyword}."
         ),
         default=DEFAULT_BASE_URL,
@@ -179,14 +153,14 @@ def main():
 
     parser.add_argument(
         "--year",
-        help="Año de publicacion a guardar. Por defecto usa el año actual.",
+        help="Año de publicación a guardar. Si no se indica, no filtra por año.",
         type=int,
-        default=datetime.now().year,
+        default=None,
     )
 
     parser.add_argument(
         "--all-years",
-        help="Guardar noticias de cualquier año.",
+        help="Ignorar el filtro por año si se combina con --year.",
         action="store_true",
     )
 
@@ -233,10 +207,14 @@ def main():
                 )
                 continue
 
-            if not args.all_years and not article_matches_year(article, args.year):
+            if (
+                args.year is not None
+                and not args.all_years
+                and not article_matches_year(article, args.year)
+            ):
                 print(
                     "La noticia fue descartada porque no pertenece "
-                    f"al anio {args.year}."
+                    f"al año {args.year}."
                 )
                 continue
 
