@@ -5,8 +5,7 @@ import unicodedata
 from parser import parse_article
 from scraper import DEFAULT_BASE_URL, search_news_links
 from storage import save_to_csv
-from utils import can_fetch_url
-from utils import polite_delay
+from utils import can_fetch_url, polite_delay
 
 
 def normalize_text(text: str) -> str:
@@ -201,7 +200,7 @@ def main():
 
     print(f"Buscando noticias relacionadas con: {keyword}")
 
-    candidate_limit = max(args.max_results * 3, args.max_results)
+    candidate_limit = args.max_results * 3
 
     links = search_news_links(
         keyword=keyword,
@@ -232,7 +231,6 @@ def main():
                     "La noticia fue descartada porque no coincide "
                     "con la palabra clave."
                 )
-                polite_delay(1)
                 continue
 
             if not args.all_years and not article_matches_year(article, args.year):
@@ -240,7 +238,6 @@ def main():
                     "La noticia fue descartada porque no pertenece "
                     f"al anio {args.year}."
                 )
-                polite_delay(1)
                 continue
 
             news.append(article)
@@ -248,11 +245,11 @@ def main():
             if len(news) >= args.max_results:
                 break
 
-            polite_delay(1)
-
         except Exception as error:
             print(f"No se pudo procesar la noticia: {link}")
             print(f"Error: {error}")
+
+        polite_delay(1)
 
     if not news:
         print("No se encontraron noticias que coincidan con la palabra clave.")

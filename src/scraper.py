@@ -3,8 +3,7 @@ from urllib.parse import quote, quote_plus
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
-from utils import absolute_url
-from utils import can_fetch_url
+from utils import USER_AGENT, absolute_url, can_fetch_url
 
 
 DEFAULT_BASE_URL = "https://www.perfil.com"
@@ -55,41 +54,32 @@ def search_news_links(
     """
 
     links = []
+    search_url = build_search_url(keyword, base_url, page_number=1)
+
+    print(f"URL de búsqueda: {search_url}")
+
+    if not can_fetch_url(search_url):
+        print(f"robots.txt no permite acceder a: {search_url}")
+        return links
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
 
-        page = browser.new_page(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0 Safari/537.36"
+        page = browser.new_page(user_agent=USER_AGENT)
+        page.goto(search_url, wait_until="networkidle", timeout=30000)
+
+        try:
+            page.wait_for_selector(".gsc-webResult", timeout=15000)
+        except PlaywrightTimeoutError:
+            print(
+                "No se pudieron cargar resultados con el selector de Perfil "
+                "(.gsc-webResult). Si cambiaste la URL, ese sitio probablemente "
+                "usa otra estructura de busqueda."
             )
-        )
+            browser.close()
+            return links
 
-        for page_number in range(1, max_pages + 1):
-            search_url = build_search_url(keyword, base_url, page_number)
-
-            print(f"URL de búsqueda: {search_url}")
-
-            if can_fetch_url(search_url):
-                print(f"robots.txt permite acceder a: {search_url}")
-            else:
-                print(f"robots.txt no permite acceder a: {search_url}")
-                break
-
-            page.goto(search_url, wait_until="networkidle", timeout=30000)
-
-            try:
-                page.wait_for_selector(".gsc-webResult", timeout=15000)
-            except PlaywrightTimeoutError:
-                print(
-                    "No se pudieron cargar resultados con el selector de Perfil "
-                    "(.gsc-webResult). Si cambiaste la URL, ese sitio probablemente "
-                    "usa otra estructura de busqueda."
-                )
-                break
-
+        for current_page in range(1, max_pages + 1):
             result_links = page.locator(".gsc-webResult a.gs-title").evaluate_all(
                 """
                 elements => elements
@@ -110,8 +100,17 @@ def search_news_links(
                 if len(links) >= max_results:
                     break
 
-            if len(links) >= max_results or new_links == 0:
+            if len(links) >= max_results:
                 break
+
+            if current_page < max_pages:
+                next_page_num = current_page + 1
+                try:
+                    page.locator(".gsc-cursor-page", has_text=str(next_page_num)).first.click()
+                    page.wait_for_load_state("networkidle", timeout=15000)
+                    page.wait_for_timeout(2000)
+                except Exception:
+                    break
 
         browser.close()
 

@@ -96,52 +96,27 @@ def _parse_json_ld(soup):
     return {}
 
 
+def _normalize_structured_value(data, value_key: str):
+    """
+    Normaliza un dato que puede venir como string, diccionario o lista.
+    """
+
+    if isinstance(data, dict):
+        return data.get(value_key)
+
+    if isinstance(data, list) and data:
+        first_item = data[0]
+        return first_item.get(value_key) if isinstance(first_item, dict) else first_item
+
+    return data
+
+
 def _normalize_image(image):
-    """
-    Normaliza el dato de imagen.
-
-    La imagen puede venir como:
-        - string con URL
-        - diccionario con clave "url"
-        - lista de imágenes
-    """
-
-    if isinstance(image, dict):
-        return image.get("url")
-
-    if isinstance(image, list) and image:
-        first_image = image[0]
-
-        if isinstance(first_image, dict):
-            return first_image.get("url")
-
-        return first_image
-
-    return image
+    return _normalize_structured_value(image, "url")
 
 
 def _normalize_author(author):
-    """
-    Normaliza el dato de autor.
-
-    El autor puede venir como:
-        - string
-        - diccionario con clave "name"
-        - lista de autores
-    """
-
-    if isinstance(author, dict):
-        return author.get("name")
-
-    if isinstance(author, list) and author:
-        first_author = author[0]
-
-        if isinstance(first_author, dict):
-            return first_author.get("name")
-
-        return first_author
-
-    return author
+    return _normalize_structured_value(author, "name")
 
 
 def parse_article(url: str) -> dict:

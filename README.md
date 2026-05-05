@@ -1,211 +1,209 @@
 # python-news-scraping
 
+Un script de Python que busca noticias en un portal de noticias según una
+palabra clave, extrae la información relevante de cada artículo y guarda
+los resultados en un archivo CSV.
 
-### Responsabilidad de cada modulo
+Fue desarrollado como ejercicio de web scraping y cumple con los requisitos
+de extracción de datos, filtrado por palabra clave, manejo de robots.txt
+y uso de Playwright para el buscador dinámico.
 
-- `src/main.py`: punto de entrada del script. Lee argumentos, coordina la
-  busqueda, filtra resultados por palabra clave y guarda el CSV.
-- `src/scraper.py`: construye la URL de busqueda y usa Playwright para obtener
-  enlaces de noticias.
-- `src/parser.py`: extrae autor, fecha, titulo, descripcion, imagen y URL desde
-  cada noticia.
-- `src/storage.py`: guarda la informacion extraida en un archivo CSV.
-- `src/utils.py`: contiene funciones auxiliares para requests, URLs absolutas y
-  pausas entre peticiones.
+## ¿Qué hace?
 
-## Instalacion
+1. Busca noticias en Perfil.com usando la palabra clave que le indiques.
+2. Entra a cada artículo encontrado y extrae el autor, fecha, título, descripción, imagen y URL.
+3. Filtra las noticias para quedarte solo con las que mencionan la keyword en el título o descripción.
+4. Guarda todo en un archivo CSV listo para abrir en Excel o Google Sheets.
 
-Clonar el repositorio:
+## Instalación
+
+**1. Clonar el repositorio:**
 
 ```bash
 git clone https://github.com/gasabe/python-news-scraping.git
 cd python-news-scraping
 ```
 
-Crear y activar un entorno virtual:
+**2. Crear un entorno virtual:**
 
 ```powershell
 py -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-Instalar las dependencias del proyecto:
+Si estás en Mac o Linux, el comando para activarlo es:
+
+```bash
+source venv/bin/activate
+```
+
+**3. Instalar las dependencias:**
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-Instalar los navegadores necesarios para Playwright:
+**4. Instalar el navegador para Playwright:**
 
 ```powershell
 playwright install
 ```
 
+Esto descarga Chromium, que el scraper usa para interactuar con el buscador
+dinámico de Perfil. Solo se ejecuta una vez.
+
 ## Uso
 
-### Caso 1: busqueda interactiva
+### Búsqueda rápida
 
-Si no se pasa una palabra clave por argumento, el programa la solicita por
-consola:
+```powershell
+py src/main.py -k "donald trump"
+```
+
+### Búsqueda con límite de resultados
+
+```powershell
+py src/main.py -k "inteligencia artificial" -n 5
+```
+
+### Filtrar por un año específico
+
+```powershell
+py src/main.py -k "donald trump" --year 2025
+```
+
+### Noticias de cualquier año
+
+```powershell
+py src/main.py -k "elon musk" --all-years
+```
+
+### Modo interactivo
+
+Si no le pasás una palabra clave con `-k`, el programa te la pide por consola:
 
 ```powershell
 py src/main.py
 ```
 
-Ejemplo:
-
 ```text
 Ingrese una palabra clave: economia
 ```
 
-### Caso 2: busqueda por argumento
+### Combinar opciones
 
-Tambien se puede indicar la palabra clave directamente:
-
-```powershell
-py src/main.py --keyword "economia"
-```
-
-Forma corta:
+Podés usar varios argumentos juntos:
 
 ```powershell
-py src/main.py -k "economia"
+py src/main.py -k "donald trump" -n 3 --year 2025 --all-years
 ```
 
-### Caso 3: limitar la cantidad de noticias a guardar
+## Argumentos disponibles
 
-Por defecto se guardan hasta 10 noticias. Ese limite se puede modificar con
-`--max-results`:
+| Argumento | Corto | Descripción | Por defecto |
+|---|---|---|---|
+| `--keyword` | `-k` | Palabra clave para buscar | Se pide por consola |
+| `--max-results` | `-n` | Máximo de noticias a guardar | 10 |
+| `--year` | | Año de publicación | Año actual |
+| `--all-years` | | Traer noticias de cualquier año | Desactivado |
+| `--url` | `-u` | URL base o plantilla de búsqueda | Perfil.com |
 
-```powershell
-py src/main.py --keyword "economia" --max-results 5
-```
+## ¿Dónde se guardan los resultados?
 
-Forma corta:
-
-```powershell
-py src/main.py -k "economia" -n 5
-```
-
-### Caso 4: filtrar por anio de publicacion
-
-Por defecto el script guarda noticias del anio actual. Tambien se puede indicar
-un anio puntual:
-
-```powershell
-py src/main.py --keyword "riquelme" --year 2026
-```
-
-Si se quieren guardar noticias de cualquier anio:
-
-```powershell
-py src/main.py --keyword "riquelme" --all-years
-```
-
-### Caso 5: usar otra URL de busqueda
-
-Por defecto el script usa el buscador de Perfil:
-
-```powershell
-py src/main.py --keyword "politica" --url "https://www.perfil.com"
-```
-
-Tambien se puede pasar una plantilla de busqueda completa usando `{keyword}`:
-
-```powershell
-py src/main.py --keyword "politica" --url "https://www.perfil.com/buscador?q={keyword}#gsc.tab=0&gsc.q={keyword}&gsc.page=1"
-```
-
-Importante: cambiar la URL no alcanza para soportar cualquier diario. Cada sitio
-puede tener una ruta de busqueda, selectores HTML y formato de enlaces distintos.
-La extraccion de enlaces actual sigue pensada para resultados de Perfil /
-Google Custom Search.
-
-## Salida generada
-
-Los resultados se guardan en la carpeta `data/` con un nombre basado en la
-palabra clave buscada:
+Los archivos CSV van a la carpeta `data/`, con un nombre basado en la palabra
+clave que buscaste:
 
 ```text
-data/noticias_economia.csv
-data/noticias_politica.csv
+data/noticias_donald_trump.csv
+data/noticias_elon_musk.csv
 ```
 
-El CSV contiene las columnas pedidas por la consigna:
+Cada archivo tiene estas columnas:
 
 ```text
-autor,fecha_publicacion,titulo,descripcion,url_imagen,url_noticia
+autor, fecha_publicacion, titulo, descripcion, url_imagen, url_noticia
 ```
 
-Ejemplo de ejecucion:
+Las fechas están en formato ISO 8601 (por ejemplo: `2025-03-15T10:30:00-03:00`).
+El CSV usa codificación `utf-8-sig` para que Excel abra bien los acentos y
+caracteres especiales sin necesidad de configuraciones adicionales.
+
+### Ejemplo de ejecución
 
 ```powershell
-py src/main.py --keyword "economia" --max-results 10
+py src/main.py -k "donald trump" --year 2025
 ```
-
-Ejemplo de salida en consola:
 
 ```text
-Buscando noticias relacionadas con: economia
-URL de busqueda: https://www.perfil.com/buscador?q=economia#gsc.tab=0&gsc.q=economia&gsc.page=1
-Se encontraron 2 enlaces para analizar.
-[1/2] Extrayendo: https://www.perfil.com/noticias/deportes/...
-Proceso finalizado. Archivo generado: data/noticias_economia.csv
+Buscando noticias relacionadas con: donald trump
+URL de búsqueda: https://www.perfil.com/buscador?q=donald+trump#gsc.tab=0&gsc.q=donald%20trump&gsc.page=1
+Se encontraron 13 enlaces candidatos para analizar.
+[1/13] Extrayendo: https://www.perfil.com/noticias/internacional/...
+[2/13] Extrayendo: https://www.perfil.com/noticias/politica/...
+...
+Proceso finalizado. Archivo generado: data/noticias_donald_trump.csv
 ```
 
-## Criterios de filtrado
+## ¿Cómo funciona el filtro de palabras clave?
 
-La consigna pide extraer articulos que contengan una palabra clave determinada
-en el titulo o descripcion.
+La consigna del ejercicio pide que las noticias contengan la palabra clave
+en el **título** o la **descripción**. El script aplica el filtro de esta
+forma:
 
-En este proyecto el filtro se aplica sobre:
+- **Normaliza el texto**: ignora mayúsculas, minúsculas y acentos.
+  - `"Economía"` coincide con `"economia"`
+  - `"dólar"` coincide con `"dolar"`
 
-- titulo
-- descripcion
-- URL de la noticia
+- **Para búsquedas con varias palabras** (como "donald trump"):
+  - Primero busca la frase completa.
+  - Si no la encuentra, acepta coincidencias donde aparezcan todas las
+    palabras por separado (aunque no estén juntas).
+  - Como apoyo, también busca en la URL de la noticia, porque a veces el
+    tema aparece en la dirección aunque no en el título.
 
-La URL se incluye como apoyo porque en algunos portales la seccion o tema de la
-noticia aparece en la direccion aunque no siempre figure de forma literal en el
-titulo o la descripcion.
-
-El filtro tambien normaliza texto para comparar sin distinguir mayusculas,
-minusculas ni acentos. Por ejemplo:
-
-```text
-"Economia" coincide con "economia"
-"dolar" coincide con "dolar"
-"economia" coincide aunque las palabras aparezcan separadas
-```
-
-Por defecto tambien se descartan noticias que no pertenecen al anio actual.
-Esto evita guardar resultados historicos cuando el buscador devuelve articulos
-viejos por relevancia. Se puede cambiar con `--year` o desactivar con
-`--all-years`.
+- **Filtro por año**: por defecto se guardan solo noticias del año actual
+  para evitar resultados viejos. Se puede cambiar con `--year` o desactivar
+  con `--all-years`.
 
 ## Scraping responsable
 
-Para reducir la posibilidad de bloqueo y evitar sobrecargar el sitio, el script
-incluye:
+Para evitar sobrecargar el sitio y reducir la posibilidad de bloqueo, el
+script incluye:
 
-- User-Agent similar al de un navegador real.
-- Timeouts en las peticiones HTTP.
-- Pausas entre requests mediante `polite_delay`.
-- Consulta de `robots.txt` antes de acceder al buscador y a cada noticia.
-- Uso de Playwright solo para cargar el buscador dinamico.
+- Consulta `robots.txt` antes de acceder al buscador y a cada noticia.
+- User-Agent de un navegador real.
+- Timeouts en todas las peticiones HTTP.
+- Pausas entre requests para no saturar el servidor.
+- Playwright solo se usa para el buscador dinámico; la extracción de cada
+  artículo usa `requests` que es más liviano.
 
-Pendiente de mejora:
+## Cómo está organizado el código
 
-- Hacer configurable el delay entre peticiones.
-- Agregar reintentos controlados ante errores temporales.
+El proyecto está dividido en módulos, cada uno con una responsabilidad clara:
 
-## Limitaciones actuales
+| Módulo | Qué hace |
+|---|---|
+| `src/main.py` | Punto de entrada. Lee argumentos, coordina todo el flujo, filtra y guarda |
+| `src/scraper.py` | Construye la URL del buscador y usa Playwright para obtener los enlaces de noticias |
+| `src/parser.py` | Entra a cada noticia y extrae los datos usando JSON-LD y meta tags |
+| `src/storage.py` | Escribe los resultados en un archivo CSV |
+| `src/utils.py` | Funciones auxiliares: requests, URLs absolutas, robots.txt, pausas |
 
-- El scraper esta adaptado al buscador y estructura actual de Perfil.
-- `--url` puede cambiar la direccion de busqueda, pero no convierte el scraper
-  en generico para cualquier portal.
-- Si el sitio cambia sus selectores, metadatos o comportamiento del buscador,
+## Limitaciones conocidas
+
+- El scraper está adaptado al buscador de Perfil.com (Google Custom Search).
+- Cambiar la URL con `--url` permite buscar en otra dirección, pero no convierte
+  al scraper en genérico para cualquier portal. Cada sitio tiene selectores y
+  estructura HTML distintos.
+- Si Perfil cambia sus selectores, metadatos o el comportamiento del buscador,
   puede requerir ajustes.
-- La extraccion de articulos es secuencial, por lo que puede ser lenta si se
-  analizan muchas noticias.
-- No hay tests automatizados todavia.
-- No se incluye Dockerfile en esta primera version.
+- La extracción es secuencial, así que con muchos resultados puede tardar
+  algunos minutos.
+
+## Ideas para mejorar
+
+- Hacer configurable la pausa entre peticiones.
+- Agregar reintentos automáticos ante errores de red.
+- Tests automatizados.
+- Empaquetar en Docker para facilitar la ejecución.
+- Soporte para otros portales de noticias.
