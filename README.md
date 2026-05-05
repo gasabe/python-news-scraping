@@ -168,9 +168,10 @@ guarda en el CSV, pero no se usa como criterio de coincidencia.
   - `"dólar"` coincide con `"dolar"`
 
 - **Para búsquedas con varias palabras** (como "donald trump"):
-  - Primero busca la frase completa.
-  - Si no la encuentra, acepta que aparezca cualquiera de las palabras en el
-    título o en la descripción.
+  - Busca la frase completa en el título o en la descripción.
+  - No acepta coincidencias parciales con una sola palabra de la frase. Por
+    ejemplo, `"Donald trump"` no coincide solo por encontrar `"Donald"` o
+    `"trump"` por separado.
 
 Esta decisión interpreta el requisito como una coincidencia en el título **o**
 en la descripción, sin exigir que la palabra clave aparezca en ambos campos.
